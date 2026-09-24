@@ -1,19 +1,27 @@
 /* ==========================================================================
-   Creator Partner — Channel Review (fictional demo)
+   Creator Partner — Channel Review (design concept)
 
-   This script drives UI state only:
+   UI state only. This script:
 
-   • It makes no network requests of any kind.
-   • It never reads, stores, transmits, or logs credentials. The password
-     input in the demo form is deliberately never touched by this file — the
-     value is not read on submit, not on input, and not anywhere else.
-   • Every affordance that looks like authentication ("Send", "Continue with
-     Google") is a clearly labelled simulation.
+   • makes no network requests of any kind;
+   • reads, writes, and stores nothing — no cookies, no localStorage;
+   • never touches a credential field, because the page has none. The only
+     <input> elements in the project are the contact form's name, email, and
+     message — see "Security posture" in README.md.
+
+   The one control that really submits is the contact form, and it does so
+   natively: it is a plain <form method="POST"> to FormSubmit and this script
+   deliberately does NOT intercept it. The handler in section 7 only paints a
+   busy state — it must never call preventDefault().
+
+   Every other affordance ("Start channel review", "Continue with Google",
+   Privacy / Terms / Help) is simulated in-page and says so when used.
    ========================================================================== */
 (() => {
   'use strict';
 
-  /* --- environment ------------------------------------------------------ */
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
   const root = document.documentElement;
   root.classList.remove('no-js');
   root.classList.add('js');
@@ -21,14 +29,25 @@
   const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* --- helpers ---------------------------------------------------------- */
-  const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-  const setStatus = (element, message, tone) => {
-    if (!element) return;
-    element.textContent = message || '';
-    element.classList.remove('field-status--error', 'field-status--ok');
-    if (tone) element.classList.add(`field-status--${tone}`);
-    element.hidden = !message;
+  /* Builds an <svg><use href="#i-…"></svg> against the sprite in index.html. */
+  const icon = (name, className = 'icon') => {
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    svg.setAttribute('class', className);
+    svg.setAttribute('aria-hidden', 'true');
+
+    const use = document.createElementNS(SVG_NS, 'use');
+    use.setAttribute('href', `#i-${name}`);
+
+    svg.append(use);
+    return svg;
+  };
+
+  const el = (tag, className, text) => {
+    const node = document.createElement(tag);
+    if (className) node.className = className;
+    if (text) node.textContent = text;
+    return node;
   };
 
   /* --- 1. Footer year --------------------------------------------------- */
@@ -41,32 +60,23 @@
   const toast = (message) => {
     if (!toastStack) return;
 
-    const note = document.createElement('div');
-    note.className = 'toast-note';
+    const note = el('div', 'toast');
     note.setAttribute('role', 'status');
-
-    const icon = document.createElement('i');
-    icon.className = 'bi bi-info-circle';
-    icon.setAttribute('aria-hidden', 'true');
-
-    const text = document.createElement('span');
-    text.textContent = message;
-
-    note.append(icon, text);
+    note.append(icon('info'), el('span', null, message));
     toastStack.append(note);
 
     window.setTimeout(() => {
       note.classList.add('is-leaving');
-      window.setTimeout(() => note.remove(), 400);
-    }, 4200);
+      window.setTimeout(() => note.remove(), 360);
+    }, 4400);
   };
 
-  /* --- 3. Progressive checklist reveal ---------------------------------- */
-  const checklistItems = Array.from(document.querySelectorAll('.checklist__item'));
+  /* --- 3. Progressive reveal for the check list ------------------------- */
+  const checkItems = Array.from(document.querySelectorAll('.checks__item'));
 
-  if (checklistItems.length) {
+  if (checkItems.length) {
     if (prefersReducedMotion || !('IntersectionObserver' in window)) {
-      checklistItems.forEach((item) => item.classList.add('is-visible'));
+      checkItems.forEach((item) => item.classList.add('is-visible'));
     } else {
       const observer = new IntersectionObserver((entries) => {
         entries.forEach((entry) => {
@@ -76,64 +86,11 @@
         });
       }, { threshold: 0.15, rootMargin: '0px 0px -8% 0px' });
 
-      checklistItems.forEach((item) => observer.observe(item));
+      checkItems.forEach((item) => observer.observe(item));
     }
   }
 
-  /* --- 4. Account form (demo only — nothing is ever submitted) ---------- */
-  const accountForm = document.getElementById('accountForm');
-  const emailInput = document.getElementById('email');
-  const emailError = document.getElementById('emailError');
-  const formStatus = document.getElementById('formStatus');
-
-  if (accountForm) {
-    accountForm.addEventListener('submit', (event) => {
-      // There is no endpoint and no backend: the form never submits. Note that
-      // #password is intentionally absent here — no code path reads its value.
-      event.preventDefault();
-
-      const value = emailInput ? emailInput.value.trim() : '';
-
-      if (!EMAIL_PATTERN.test(value)) {
-        if (emailInput) {
-          emailInput.setAttribute('aria-invalid', 'true');
-          emailInput.focus();
-        }
-        setStatus(emailError, 'Enter a valid email address to continue.', 'error');
-        setStatus(formStatus, '', null);
-        return;
-      }
-
-      if (emailInput) emailInput.setAttribute('aria-invalid', 'false');
-      setStatus(emailError, '', null);
-      setStatus(
-        formStatus,
-        'Demo only — nothing was sent. This prototype has no backend and collects no credentials.',
-        'ok'
-      );
-    });
-
-    if (emailInput) {
-      emailInput.addEventListener('input', () => {
-        const value = emailInput.value.trim();
-        if (value && EMAIL_PATTERN.test(value)) {
-          emailInput.setAttribute('aria-invalid', 'false');
-          setStatus(emailError, '', null);
-        }
-      });
-    }
-  }
-
-  /* --- 5. Simulated OAuth hand-off -------------------------------------- */
-  const googleButton = document.getElementById('googleBtn');
-
-  if (googleButton) {
-    googleButton.addEventListener('click', () => {
-      toast('Demo only: a real integration would hand off to Google OAuth here. No account is connected.');
-    });
-  }
-
-  /* --- 6. Placeholder links --------------------------------------------- */
+  /* --- 4. Placeholder links --------------------------------------------- */
   document.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
@@ -142,60 +99,65 @@
     if (!link) return;
 
     event.preventDefault();
-    toast(`“${link.textContent.trim()}” is a placeholder link in this prototype.`);
+    const label = link.dataset.demoLabel || link.textContent.trim();
+    toast(`“${label}” isn't connected in this demo.`);
   });
 
-  /* --- 7. Start Channel Review ------------------------------------------ */
+  /* --- 5. "Continue with Google" (demo) --------------------------------- */
+  /* Deliberately inert. There is no OAuth client, no redirect, and no
+     credential field for it to read — so it says that instead of miming a
+     sign-in. In a real integration the user would leave this page and
+     authenticate on Google's own origin. */
+  const googleButton = document.getElementById('googleDemo');
+
+  if (googleButton) {
+    googleButton.addEventListener('click', () => {
+      toast('No OAuth flow is wired up in this demo. A real one would hand you off to ' +
+            'Google’s own sign-in page — this page never sees a password.');
+    });
+  }
+
+  /* --- 6. Start channel review (simulated) ------------------------------ */
   const startButton = document.getElementById('startReview');
-  const reviewPanel = document.getElementById('reviewStatus');
-  const stepper = document.querySelector('.stepper');
+  const statusPanel = document.getElementById('reviewStatus');
+  const stepper = document.querySelector('.steps');
 
-  const renderReviewPanel = () => {
-    if (!reviewPanel) return;
+  const renderStatus = () => {
+    if (!statusPanel) return;
 
-    reviewPanel.replaceChildren();
+    statusPanel.replaceChildren();
 
-    const iconWrap = document.createElement('span');
-    iconWrap.className = 'status-panel__icon';
-    const iconGlyph = document.createElement('i');
-    iconGlyph.className = 'bi bi-check-lg';
-    iconGlyph.setAttribute('aria-hidden', 'true');
-    iconWrap.append(iconGlyph);
+    const iconWrap = el('span', 'status__icon');
+    iconWrap.append(icon('check'));
 
-    const body = document.createElement('div');
+    const body = el('div');
 
-    const title = document.createElement('p');
-    title.className = 'status-panel__title';
-    title.textContent = 'Review request prepared';
-
-    const copy = document.createElement('p');
-    copy.className = 'status-panel__body';
-    copy.textContent =
-      'Your channel information is queued for an eligibility check. This is a demo — ' +
-      'no request was created and nothing was sent anywhere.';
-
-    const actions = document.createElement('div');
-    actions.className = 'status-panel__actions';
-
-    const reset = document.createElement('button');
+    const actions = el('div', 'status__actions');
+    const reset = el('button', 'btn btn--ghost');
     reset.type = 'button';
-    reset.className = 'btn btn-quiet';
-    reset.textContent = 'Run the demo again';
+    reset.append(el('span', 'btn__label', 'Start over'));
     reset.addEventListener('click', () => {
-      reviewPanel.hidden = true;
+      statusPanel.hidden = true;
       if (startButton) startButton.focus();
     });
     actions.append(reset);
 
-    body.append(title, copy, actions);
-    reviewPanel.append(iconWrap, body);
-    reviewPanel.hidden = false;
-    reviewPanel.focus();
+    body.append(
+      el('p', 'status__title', 'Review request prepared'),
+      el('p', 'status__body',
+        'Your channel information is queued for an eligibility check. This page runs entirely ' +
+        'in your browser, so nothing was submitted.'),
+      actions
+    );
+
+    statusPanel.append(iconWrap, body);
+    statusPanel.hidden = false;
+    statusPanel.focus();
   };
 
   if (startButton) {
     const label = startButton.querySelector('.btn__label');
-    const idleLabel = label ? label.textContent : 'Start Channel Review';
+    const idleLabel = label ? label.textContent : 'Start channel review';
     const loadingLabel = startButton.dataset.loadingText || 'Preparing your channel review…';
 
     startButton.addEventListener('click', () => {
@@ -206,7 +168,7 @@
       startButton.disabled = true;
       if (label) label.textContent = loadingLabel;
       if (stepper) stepper.classList.add('is-working');
-      if (reviewPanel) reviewPanel.hidden = true;
+      if (statusPanel) statusPanel.hidden = true;
 
       window.setTimeout(() => {
         startButton.classList.remove('is-loading');
@@ -214,8 +176,38 @@
         startButton.disabled = false;
         if (label) label.textContent = idleLabel;
         if (stepper) stepper.classList.remove('is-working');
-        renderReviewPanel();
-      }, prefersReducedMotion ? 450 : 1800);
+        renderStatus();
+      }, prefersReducedMotion ? 450 : 1600);
+    });
+  }
+
+  /* --- 7. Contact form -------------------------------------------------- */
+  /* This is the one real submission on the page: a native POST of name +
+     email + message to FormSubmit, which relays them by email.
+
+     There is deliberately NO preventDefault() here. Intercepting the submit
+     is what turned an earlier revision of this project into a working
+     credential harvester — a single preventDefault() was all that stood
+     between a password field and a live inbox. The native submit is the
+     whole point of this form, so the handler only paints a busy state and
+     gets out of the way.
+
+     Nothing is read, stored, or validated here; the browser's own required /
+     type="email" constraints do the validation. */
+  const contactForm = document.getElementById('contactForm');
+  const contactButton = document.getElementById('contactSubmit');
+
+  if (contactForm && contactButton) {
+    contactForm.addEventListener('submit', () => {
+      contactButton.classList.add('is-loading');
+      contactButton.setAttribute('aria-busy', 'true');
+
+      /* The POST navigates to a new tab, so this tab stays put — the busy
+         state is cleared on a timer rather than on navigation. */
+      window.setTimeout(() => {
+        contactButton.classList.remove('is-loading');
+        contactButton.removeAttribute('aria-busy');
+      }, 5000);
     });
   }
 })();
