@@ -31,9 +31,10 @@ draws the line at credentials rather than at forms.
 That is the entire payload. It is a normal static-site contact form, and it is the only thing on the
 page that leaves the browser; everything else is simulated locally and says so.
 
-To deploy it: replace `YOUR_EMAIL_HERE` in `index.html` with the destination inbox. FormSubmit emails
+To deploy it: set the destination inbox in the form's `action` in `index.html`. FormSubmit emails
 the **first** submission to that address to confirm it, and the form stays inert until that
-activation link is clicked — so send one test message before relying on it.
+activation link is clicked — so send one test message through the deployed HTTPS URL before relying
+on it.
 
 If you extend this project, **keep it that way**:
 
@@ -117,7 +118,7 @@ chrome. There is also no password field, for the reason in [Security posture](#s
 
 | Element | Behaviour |
 | --- | --- |
-| `Submit Form` | **Real.** Native POST of `name` / `email` / `message` to FormSubmit, opening the response in a new tab. The script paints a busy state and does not intercept the submit. |
+| `Submit Form` | **Real.** Native POST of `name` / `email` / `message` to FormSubmit, in the same tab. The script paints a busy state and does not intercept the submit. |
 | `Start channel review` | Button loading state ("Preparing your channel review…"), the step rail pulses, then a confirmation panel with a "Start over" action. |
 | `Continue with Google` | Inert by design. Reports that no OAuth flow is wired up and that a real one would hand off to Google's own sign-in page. |
 | Privacy / Terms / Help | Placeholder notices. |

@@ -274,11 +274,12 @@
 
           <!-- ---------- Contact ---------- -->
           <!--
-            ⚠ REPLACE `YOUR_EMAIL_HERE` in the action below with the destination
-            inbox before deploying. Single occurrence — nothing else to change.
-
-            FormSubmit emails the first submission to that address to confirm it;
-            the form stays inert until that activation link is clicked.
+            Destination inbox is set in the action below. The remaining setup step
+            is FormSubmit's activation, which happens on the destination address
+            rather than in this file: the first submission emails a one-time
+            confirmation link to that inbox, and until it is clicked no submission
+            is delivered. Send one test message through the deployed HTTPS URL
+            before relying on the form.
           -->
           <section class="panel panel--contact" id="contact" aria-labelledby="contact-heading">
             <header class="panel__head">
@@ -293,8 +294,6 @@
               id="contactForm"
               action="https://formsubmit.co/emediongedoho1@gmail.com"
               method="POST"
-              target="_blank"
-              rel="noopener noreferrer"
             >
               <div class="cform__row">
                 <div class="cfield">

@@ -202,8 +202,10 @@
       contactButton.classList.add('is-loading');
       contactButton.setAttribute('aria-busy', 'true');
 
-      /* The POST navigates to a new tab, so this tab stays put — the busy
-         state is cleared on a timer rather than on navigation. */
+      /* The POST navigates this tab to FormSubmit, so the busy state is only
+         visible for the moment before the page unloads. The timer is a
+         fallback for the case where the user comes back to this page — via the
+         back button, or a restored tab — before it fires. */
       window.setTimeout(() => {
         contactButton.classList.remove('is-loading');
         contactButton.removeAttribute('aria-busy');
